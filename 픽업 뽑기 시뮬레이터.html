@@ -1,0 +1,1283 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>픽업 뽑기 시뮬레이터 | 5성·4성 피티 분석 기반</title>
+  <style>
+    /* ==========================================================================
+       디자인 토큰 & 다크 사이파이/가챠 테마 설정
+       ========================================================================== */
+    :root {
+      --bg-main: #070b14;
+      --bg-elevated: #0e1626;
+      --bg-card: #131d32;
+      --bg-card-hover: #192642;
+      --border-subtle: rgba(148, 163, 184, 0.16);
+      --border-strong: rgba(148, 163, 184, 0.32);
+
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+
+      --accent-cyan: #38bdf8;
+      --accent-blue: #3b82f6;
+      --accent-indigo: #6366f1;
+
+      --rarity-5: #fbbf24;
+      --rarity-5-deep: #b45309;
+      --rarity-5-bg: rgba(251, 191, 36, 0.14);
+
+      --rarity-4: #c084fc;
+      --rarity-4-deep: #7e22ce;
+      --rarity-4-bg: rgba(192, 132, 252, 0.14);
+
+      --rarity-3: #60a5fa;
+      --rarity-3-bg: rgba(96, 165, 250, 0.12);
+
+      --success: #34d399;
+      --warning: #fbbf24;
+      --danger: #f87171;
+
+      --radius-sm: 10px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --shadow-card: 0 12px 32px -12px rgba(0, 0, 0, 0.65);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Noto Sans KR", "Segoe UI", Roboto, sans-serif;
+      background:
+        radial-gradient(circle at 15% 10%, rgba(56, 189, 248, 0.12), transparent 36%),
+        radial-gradient(circle at 85% 15%, rgba(251, 191, 36, 0.1), transparent 38%),
+        radial-gradient(circle at 50% 100%, rgba(99, 102, 241, 0.12), transparent 45%),
+        var(--bg-main);
+      color: var(--text-primary);
+      min-height: 100vh;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 20px 16px 56px;
+    }
+
+    /* ==========================================================================
+       헤더 & 배너 정보
+       ========================================================================== */
+    .header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 18px 22px;
+      background: linear-gradient(135deg, rgba(19, 29, 50, 0.92), rgba(14, 22, 38, 0.92));
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-card);
+      margin-bottom: 18px;
+    }
+
+    .header-title-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .badge-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 999px;
+      letter-spacing: 0.02em;
+    }
+
+    .pill-cyan {
+      background: rgba(56, 189, 248, 0.14);
+      color: var(--accent-cyan);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+    }
+
+    .pill-gold {
+      background: rgba(251, 191, 36, 0.15);
+      color: var(--rarity-5);
+      border: 1px solid rgba(251, 191, 36, 0.35);
+    }
+
+    .pill-guaranteed {
+      background: rgba(52, 211, 153, 0.16);
+      color: var(--success);
+      border: 1px solid rgba(52, 211, 153, 0.4);
+    }
+
+    .pill-fifty {
+      background: rgba(251, 191, 36, 0.14);
+      color: var(--rarity-5);
+      border: 1px solid rgba(251, 191, 36, 0.35);
+    }
+
+    h1 {
+      font-size: clamp(1.35rem, 2.6vw, 1.85rem);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .subtitle {
+      color: var(--text-secondary);
+      font-size: 0.88rem;
+    }
+
+    .banner-box {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      background: rgba(7, 11, 20, 0.65);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+    }
+
+    .banner-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #f59e0b, #ea580c);
+      display: grid;
+      place-items: center;
+      font-weight: 900;
+      font-size: 1.1rem;
+      color: #090d16;
+      flex-shrink: 0;
+      box-shadow: 0 0 18px rgba(251, 191, 36, 0.35);
+    }
+
+    .banner-meta-label {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .banner-meta-name {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    /* ==========================================================================
+       상단 HUD (실시간 피티, 확률, 통계)
+       ========================================================================== */
+    .hud-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    @media (max-width: 1024px) {
+      .hud-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    @media (max-width: 560px) {
+      .hud-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    .hud-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 6px;
+      box-shadow: var(--shadow-card);
+    }
+
+    .hud-label {
+      font-size: 0.76rem;
+      color: var(--text-secondary);
+      font-weight: 600;
+    }
+
+    .hud-value {
+      font-size: 1.35rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .hud-sub {
+      font-size: 0.73rem;
+      color: var(--text-muted);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .text-gold { color: var(--rarity-5); }
+    .text-purple { color: var(--rarity-4); }
+    .text-cyan { color: var(--accent-cyan); }
+    .text-green { color: var(--success); }
+
+    /* ==========================================================================
+       액션 컨트롤 바 (1뽑기 / 10뽑기 / 초기화)
+       ========================================================================== */
+    .action-panel {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 18px 20px;
+      background: linear-gradient(180deg, rgba(22, 34, 58, 0.9), rgba(14, 22, 38, 0.95));
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-card);
+      margin-bottom: 20px;
+    }
+
+    .pull-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+      flex: 1;
+    }
+
+    .btn {
+      appearance: none;
+      border: none;
+      border-radius: var(--radius-md);
+      font-family: inherit;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform 0.14s ease, box-shadow 0.2s ease, filter 0.2s ease, background-color 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      user-select: none;
+    }
+
+    .btn:active {
+      transform: scale(0.97);
+    }
+
+    .btn-pull-1 {
+      padding: 14px 24px;
+      font-size: 1.02rem;
+      background: linear-gradient(135deg, #2563eb, #38bdf8);
+      color: #ffffff;
+      box-shadow: 0 8px 22px -6px rgba(56, 189, 248, 0.45);
+      min-width: 145px;
+    }
+
+    .btn-pull-1:hover {
+      filter: brightness(1.08);
+      transform: translateY(-1px);
+    }
+
+    .btn-pull-10 {
+      padding: 14px 28px;
+      font-size: 1.05rem;
+      background: linear-gradient(135deg, #f59e0b, #fbbf24);
+      color: #0b101b;
+      box-shadow: 0 8px 24px -6px rgba(251, 191, 36, 0.52);
+      min-width: 165px;
+    }
+
+    .btn-pull-10:hover {
+      filter: brightness(1.06);
+      transform: translateY(-1px);
+    }
+
+    .btn-reset {
+      padding: 12px 16px;
+      font-size: 0.88rem;
+      font-weight: 700;
+      background: rgba(148, 163, 184, 0.1);
+      color: var(--text-secondary);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .btn-reset:hover {
+      background: rgba(248, 113, 113, 0.14);
+      border-color: rgba(248, 113, 113, 0.4);
+      color: #fca5a5;
+    }
+
+    .pity-meter-inline {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 230px;
+    }
+
+    .pity-meter-top {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      font-weight: 600;
+    }
+
+    .progress-track {
+      width: 100%;
+      height: 8px;
+      background: rgba(15, 23, 42, 0.9);
+      border-radius: 999px;
+      overflow: hidden;
+      border: 1px solid rgba(148, 163, 184, 0.14);
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #38bdf8, #fbbf24);
+      border-radius: 999px;
+      transition: width 0.25s ease;
+    }
+
+    /* ==========================================================================
+       메인 2단 레이아웃: 뽑기 스테이지 + 로그/분석 요약
+       ========================================================================== */
+    .main-layout {
+      display: grid;
+      grid-template-columns: 1.55fr 1fr;
+      gap: 18px;
+      align-items: start;
+    }
+
+    @media (max-width: 920px) {
+      .main-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      box-shadow: var(--shadow-card);
+    }
+
+    .panel-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .panel-title {
+      font-size: 1.05rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .panel-meta {
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+    }
+
+    /* ==========================================================================
+       뽑기 결과 카드 스테이지
+       ========================================================================== */
+    .empty-stage {
+      text-align: center;
+      padding: 52px 20px;
+      border: 1px dashed rgba(148, 163, 184, 0.25);
+      border-radius: var(--radius-md);
+      background: rgba(7, 11, 20, 0.45);
+      color: var(--text-secondary);
+    }
+
+    .empty-stage strong {
+      display: block;
+      font-size: 1rem;
+      color: var(--text-primary);
+      margin-bottom: 6px;
+    }
+
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+    }
+
+    .cards-grid.single-pull {
+      grid-template-columns: minmax(180px, 260px);
+      justify-content: center;
+    }
+
+    @media (max-width: 640px) {
+      .cards-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .cards-grid.single-pull {
+        grid-template-columns: minmax(170px, 240px);
+      }
+    }
+
+    @keyframes cardPop {
+      0% {
+        opacity: 0;
+        transform: translateY(10px) scale(0.95);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .gacha-card {
+      position: relative;
+      border-radius: var(--radius-md);
+      padding: 12px 10px;
+      min-height: 148px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-elevated);
+      animation: cardPop 0.26s ease both;
+      overflow: hidden;
+    }
+
+    .gacha-card.rarity-5 {
+      background: linear-gradient(165deg, rgba(251, 191, 36, 0.24), rgba(19, 29, 50, 0.96) 55%);
+      border-color: rgba(251, 191, 36, 0.72);
+      box-shadow: 0 0 24px rgba(251, 191, 36, 0.22);
+    }
+
+    .gacha-card.rarity-4 {
+      background: linear-gradient(165deg, rgba(192, 132, 252, 0.2), rgba(19, 29, 50, 0.96) 55%);
+      border-color: rgba(192, 132, 252, 0.55);
+      box-shadow: 0 0 18px rgba(192, 132, 252, 0.14);
+    }
+
+    .gacha-card.rarity-3 {
+      background: linear-gradient(165deg, rgba(96, 165, 250, 0.12), rgba(14, 22, 38, 0.95) 60%);
+      border-color: rgba(96, 165, 250, 0.28);
+    }
+
+    .card-top-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 4px;
+      font-size: 0.7rem;
+      font-weight: 700;
+    }
+
+    .pull-index {
+      color: var(--text-muted);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .stars-5 { color: var(--rarity-5); letter-spacing: -1px; }
+    .stars-4 { color: var(--rarity-4); letter-spacing: -1px; }
+    .stars-3 { color: var(--rarity-3); letter-spacing: -1px; }
+
+    .card-center {
+      text-align: center;
+      padding: 8px 2px;
+    }
+
+    .card-type-tag {
+      display: inline-block;
+      font-size: 0.66rem;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 6px;
+      margin-bottom: 5px;
+      background: rgba(15, 23, 42, 0.7);
+      color: var(--text-secondary);
+    }
+
+    .card-name {
+      font-size: 0.88rem;
+      font-weight: 800;
+      line-height: 1.3;
+      word-break: keep-all;
+    }
+
+    .card-footer {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 4px;
+    }
+
+    .tag-pickup {
+      font-size: 0.65rem;
+      font-weight: 800;
+      padding: 2px 7px;
+      border-radius: 999px;
+      background: rgba(251, 191, 36, 0.24);
+      color: #fde68a;
+      border: 1px solid rgba(251, 191, 36, 0.55);
+    }
+
+    .tag-standard {
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 999px;
+      background: rgba(148, 163, 184, 0.16);
+      color: #cbd5e1;
+    }
+
+    .tag-pity-hit {
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: rgba(56, 189, 248, 0.16);
+      color: #7dd3fc;
+    }
+
+    /* ==========================================================================
+       우측 사이드바: 5성 획득 로그 & 확률 모델 요약
+       ========================================================================== */
+    .side-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .log-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 310px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .log-list::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .log-list::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.25);
+      border-radius: 999px;
+    }
+
+    .log-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      background: rgba(7, 11, 20, 0.6);
+      border: 1px solid rgba(251, 191, 36, 0.28);
+      font-size: 0.84rem;
+    }
+
+    .log-item-main {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .log-item-title {
+      font-weight: 700;
+      color: var(--rarity-5);
+    }
+
+    .log-item-sub {
+      font-size: 0.74rem;
+      color: var(--text-secondary);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .log-badge {
+      font-size: 0.7rem;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 8px;
+      white-space: nowrap;
+    }
+
+    .log-badge-pickup {
+      background: rgba(52, 211, 153, 0.16);
+      color: var(--success);
+      border: 1px solid rgba(52, 211, 153, 0.35);
+    }
+
+    .log-badge-off {
+      background: rgba(248, 113, 113, 0.14);
+      color: #fca5a5;
+      border: 1px solid rgba(248, 113, 113, 0.32);
+    }
+
+    .formula-box {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .formula-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 7px 10px;
+      border-radius: 8px;
+      background: rgba(7, 11, 20, 0.55);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .formula-row strong {
+      color: var(--text-primary);
+      font-weight: 700;
+    }
+
+    .curve-preview {
+      margin-top: 4px;
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      background: rgba(56, 189, 248, 0.06);
+      border: 1px solid rgba(56, 189, 248, 0.18);
+      font-size: 0.74rem;
+      color: var(--text-secondary);
+      line-height: 1.55;
+    }
+
+    .toast-note {
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- ======================================================================
+         상단 헤더 & 픽업 배너 요약
+         ====================================================================== -->
+    <header class="header">
+      <div class="header-title-group">
+        <div class="badge-row">
+          <span class="pill pill-cyan">GACHA PROBABILITY SIMULATOR</span>
+          <span class="pill pill-gold">5★ 0.8% · 80천장 / 4★ 6% · 10천장</span>
+          <span id="guarantee-pill" class="pill pill-fifty">픽업 50:50 (다음 5★ 미확정)</span>
+        </div>
+        <h1>픽업 캐릭터 뽑기 시뮬레이터</h1>
+        <p class="subtitle">분석 이미지의 5성 소프트 피티·천장 곡선 및 4성 천장 규칙을 적용한 인터랙티브 시뮬레이션</p>
+      </div>
+
+      <div class="banner-box">
+        <div class="banner-icon">★5</div>
+        <div>
+          <div class="banner-meta-label">Featured Event Convene</div>
+          <div class="banner-meta-name">한정 픽업 공명자 · 분석 모델 적용</div>
+        </div>
+      </div>
+    </header>
+
+    <!-- ======================================================================
+         실시간 HUD (총 뽑기, 5성/픽업 횟수, 피티 카운터, 현재 5성 확률)
+         ====================================================================== -->
+    <section class="hud-grid" aria-label="뽑기 현황">
+      <div class="hud-card">
+        <span class="hud-label">총 누적 뽑기</span>
+        <span id="hud-total-pulls" class="hud-value text-cyan">0</span>
+        <span class="hud-sub">누적 시뮬레이션 횟수</span>
+      </div>
+
+      <div class="hud-card">
+        <span class="hud-label">획득 5성 (픽업 / 통상)</span>
+        <span id="hud-5star-total" class="hud-value text-gold">0</span>
+        <span id="hud-5star-breakdown" class="hud-sub">픽업 0 · 통상 0</span>
+      </div>
+
+      <div class="hud-card">
+        <span class="hud-label">현재 5성 피티</span>
+        <span id="hud-5star-pity" class="hud-value">0 / 80</span>
+        <span id="hud-5star-remaining" class="hud-sub">80회 이내 100% 확정</span>
+      </div>
+
+      <div class="hud-card">
+        <span class="hud-label">현재 5성 획득 확률</span>
+        <span id="hud-current-rate" class="hud-value text-gold">0.80%</span>
+        <span id="hud-pity-zone" class="hud-sub">기본 확률 구간</span>
+      </div>
+
+      <div class="hud-card">
+        <span class="hud-label">현재 4성 피티</span>
+        <span id="hud-4star-pity" class="hud-value text-purple">0 / 10</span>
+        <span class="hud-sub">10회째 4성 이상 100%</span>
+      </div>
+
+      <div class="hud-card">
+        <span class="hud-label">픽업 확정 상태</span>
+        <span id="hud-guarantee" class="hud-value text-gold">50 : 50</span>
+        <span id="hud-guarantee-sub" class="hud-sub">통상 5성 획득 시 확천</span>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         뽑기 실행 버튼 패널 (1뽑기 / 10뽑기 / 초기화)
+         ====================================================================== -->
+    <section class="action-panel" aria-label="뽑기 실행 컨트롤">
+      <div class="pull-buttons">
+        <button id="btn-pull-1" type="button" class="btn btn-pull-1">
+          <span>1뽑기</span>
+          <span style="font-size: 0.78rem; opacity: 0.9;">×1</span>
+        </button>
+
+        <button id="btn-pull-10" type="button" class="btn btn-pull-10">
+          <span>10뽑기</span>
+          <span style="font-size: 0.8rem; opacity: 0.85;">×10</span>
+        </button>
+
+        <button id="btn-reset" type="button" class="btn btn-reset">
+          기록 초기화
+        </button>
+      </div>
+
+      <div class="pity-meter-inline">
+        <div class="pity-meter-top">
+          <span>5성 천장 게이지</span>
+          <span id="meter-text">0 / 80 (확률 0.80%)</span>
+        </div>
+        <div class="progress-track">
+          <div id="pity-progress-bar" class="progress-fill"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         메인 영역: 좌측 뽑기 결과 / 우측 5성 획득 로그 및 피티 모델 요약
+         ====================================================================== -->
+    <div class="main-layout">
+      <!-- 좌측: 최근 뽑기 결과 카드 영역 -->
+      <section class="panel" aria-label="뽑기 결과">
+        <div class="panel-header">
+          <h2 class="panel-title">
+            <span class="text-gold">✦</span>
+            최근 뽑기 결과
+          </h2>
+          <span id="last-batch-summary" class="panel-meta">아직 진행한 뽑기가 없습니다</span>
+        </div>
+
+        <div id="result-stage">
+          <div class="empty-stage">
+            <strong>1뽑기 또는 10뽑기 버튼을 눌러 시뮬레이션을 시작하세요</strong>
+            5성 소프트 피티 구간(65~79스택) 진입 시 확률이 급상승하며, 80번째 뽑기(i = 79)에서 5성이 100% 등장합니다.
+          </div>
+        </div>
+      </section>
+
+      <!-- 우측: 5성 획득 히스토리 & 분석 확률 공식 요약 -->
+      <div class="side-stack">
+        <section class="panel" aria-label="5성 획득 기록">
+          <div class="panel-header">
+            <h2 class="panel-title">
+              <span class="text-gold">★</span>
+              5성 획득 기록
+            </h2>
+            <span id="log-count" class="panel-meta">총 0회 획득</span>
+          </div>
+
+          <div id="five-star-log" class="log-list">
+            <p class="toast-note">아직 획득한 5성이 없습니다.</p>
+          </div>
+        </section>
+
+        <section class="panel" aria-label="확률 모델 요약">
+          <div class="panel-header">
+            <h2 class="panel-title">
+              <span class="text-cyan">◈</span>
+              적용된 피티 확률 모델
+            </h2>
+            <span class="panel-meta">0-indexed 스택 i 기준</span>
+          </div>
+
+          <div class="formula-box">
+            <div class="formula-row">
+              <span><strong>5성 기본 (i &lt; 65)</strong></span>
+              <span>0.80% (0.008)</span>
+            </div>
+            <div class="formula-row">
+              <span><strong>소프트 피티 (65 ≤ i &lt; 70)</strong></span>
+              <span>0.8% → 20.8% 상승</span>
+            </div>
+            <div class="formula-row">
+              <span><strong>구간 가속 (70 ≤ i &lt; 76)</strong></span>
+              <span>28.8% → 68.8% 상승</span>
+            </div>
+            <div class="formula-row">
+              <span><strong>천장 직전 (76 ≤ i &lt; 79)</strong></span>
+              <span>70.8% → 90.8% 상승</span>
+            </div>
+            <div class="formula-row">
+              <span><strong>5성 확정 천장 (i ≥ 79, 80뽑)</strong></span>
+              <span class="text-gold"><strong>100.0% (1.0)</strong></span>
+            </div>
+            <div class="formula-row">
+              <span><strong>4성 피티 P₄(m)</strong></span>
+              <span class="text-purple"><strong>기본 6% · 10번째 100%</strong></span>
+            </div>
+
+            <div class="curve-preview">
+              • <strong>50:50 픽업 규칙:</strong> 5성 당첨 시 픽업 미확정 상태면 50% 확률로 한정 픽업 캐릭터, 50% 확률로 통상 5성 캐릭터가 등장하며, 통상 5성 등장 시 다음 5성은 <strong>100% 픽업 확정</strong>됩니다.<br />
+              • <strong>3성 아이템:</strong> 5성과 4성 당첨 판정 이후 남은 확률은 3성 무기/코어로 배정됩니다.
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ========================================================================
+       1. 확률 모델 & 게임 데이터 정의
+          - i: 직전 5성 이후 누적된 무5성 횟수 (0부터 시작, i = 79일 때 80번째 뽑기)
+          - m: 직전 4성 이후 누적된 무4성 횟수 (0부터 시작, m = 9일 때 10번째 뽑기)
+       ======================================================================== */
+    const PICKUP_CHARACTERS = [
+      { name: "카멜리아 · 에코 세이비어", tag: "한정 픽업" },
+      { name: "금희 · 령양의 수호자", tag: "한정 픽업" },
+      { name: "장리 · 화염의 책사", tag: "한정 픽업" }
+    ];
+
+    const STANDARD_5STAR_POOL = [
+      "감심",
+      "카카루",
+      "능양",
+      "앙코",
+      "벨리나"
+    ];
+
+    const FOUR_STAR_POOL = [
+      { name: "모르테피", kind: "공명자" },
+      { name: "산화", kind: "공명자" },
+      { name: "백로 · 치유코어", kind: "공명자" },
+      { name: "단근", kind: "공명자" },
+      { name: "연무", kind: "공명자" },
+      { name: "음정 증폭기", kind: "무기 (4★)" },
+      { name: "용의 숨결 검", kind: "무기 (4★)" }
+    ];
+
+    const THREE_STAR_POOL = [
+      "행운의 검",
+      "여정의 권총",
+      "야전 증폭기",
+      "철갑 중검",
+      "방랑자 장병기",
+      "잔상 공명 코어"
+    ];
+
+    /**
+     * 분석 이미지의 5성 피티 수식(0.8% 기본, 65~79 구간 소프트 피티 상승, i=79에서 100%)을
+     * 0~1 범위의 유효 확률로 계산합니다.
+     * @param {number} i - 현재 5성 피티 스택 (0 ~ 79)
+     * @returns {number} 5성 등장 확률 (0.008 ~ 1.0)
+     */
+    function getFiveStarProbability(i) {
+      if (i >= 79) return 1.0;
+      if (i < 65) return 0.008;
+
+      let prob;
+      if (i < 70) {
+        // 65 <= i < 70: 0.008 + 0.04 * (i - 64) -> 0.048 ~ 0.208
+        prob = 0.008 + 0.04 * (i - 64);
+      } else if (i < 76) {
+        // 70 <= i < 76: 0.208 + 0.08 * (i - 69) -> 0.288 ~ 0.688
+        prob = 0.208 + 0.08 * (i - 69);
+      } else {
+        // 76 <= i < 79: 0.708 + 0.10 * (i - 75) -> 0.808 ~ 0.908
+        prob = 0.708 + 0.10 * (i - 75);
+      }
+
+      return Math.min(1.0, Math.max(0.008, Number(prob.toFixed(6))));
+    }
+
+    /**
+     * 분석 이미지의 4성 피티 수식 P_4(m)
+     * - m < 9 (1~9번째 뽑기): 6% (0.06)
+     * - m >= 9 (10번째 뽑기): 100% (1.0)
+     * @param {number} m - 현재 4성 피티 스택 (0 ~ 9)
+     * @returns {number} 4성 등장 확률
+     */
+    function getFourStarProbability(m) {
+      return m >= 9 ? 1.0 : 0.06;
+    }
+
+    function pickRandom(arr) {
+      return arr[Math.floor(Math.random() * arr.length)];
+    }
+
+    /* ========================================================================
+       2. 시뮬레이터 상태 관리
+       ======================================================================== */
+    const state = {
+      totalPulls: 0,
+      pity5: 0,                 // 5성 무당첨 누적 스택 (0 ~ 79)
+      pity4: 0,                 // 4성 무당첨 누적 스택 (0 ~ 9)
+      guaranteedPickup: false,  // true면 다음 5성은 100% 픽업 캐릭터
+      count5Total: 0,
+      count5Pickup: 0,
+      count5Standard: 0,
+      lastBatch: [],            // 최근 1회 또는 10회 뽑기 결과 배열
+      lastBatchType: null,      // 1 또는 10
+      fiveStarHistory: []       // 획득한 5성 로그 (최신순)
+    };
+
+    /* ========================================================================
+       3. 단일 뽑기 코어 로직
+       ======================================================================== */
+    function executeSinglePull() {
+      state.totalPulls += 1;
+      const pullNumber = state.totalPulls;
+      const pityBefore5 = state.pity5; // 이번 뽑기 직전 스택 (0~79)
+      const pityBefore4 = state.pity4; // 이번 뽑기 직전 4성 스택 (0~9)
+
+      const rate5 = getFiveStarProbability(pityBefore5);
+      const roll5 = Math.random();
+
+      if (roll5 < rate5) {
+        // 5성 당첨
+        const isHardPity = pityBefore5 >= 79;
+        const isSoftPity = pityBefore5 >= 65 && !isHardPity;
+
+        let isPickupWin = false;
+        let charName = "";
+        let subLabel = "";
+
+        if (state.guaranteedPickup) {
+          isPickupWin = true;
+          state.guaranteedPickup = false;
+        } else {
+          isPickupWin = Math.random() < 0.5;
+          if (!isPickupWin) {
+            state.guaranteedPickup = true; // 다음 5성 픽업 확정
+          }
+        }
+
+        if (isPickupWin) {
+          const featured = pickRandom(PICKUP_CHARACTERS);
+          charName = featured.name;
+          subLabel = state.guaranteedPickup === false && pityBefore5 > 0 ? "픽업 공명자" : "한정 픽업";
+          state.count5Pickup += 1;
+        } else {
+          charName = pickRandom(STANDARD_5STAR_POOL);
+          subLabel = "통상 5성 (다음 확천)";
+          state.count5Standard += 1;
+        }
+
+        state.count5Total += 1;
+        const spentPity = pityBefore5 + 1; // 실제 소모된 스택 수 (1 ~ 80)
+
+        // 5성 피티 초기화, 4성 피티는 5성 등장 시에도 누적 유지(일반적 가챠 규칙)
+        state.pity5 = 0;
+        state.pity4 = (state.pity4 + 1) % 10;
+
+        const record = {
+          pullNumber,
+          rarity: 5,
+          name: charName,
+          typeLabel: "5★ 공명자",
+          isPickup: isPickupWin,
+          subLabel,
+          spentPity,
+          isHardPity,
+          isSoftPity,
+          rateUsed: (rate5 * 100).toFixed(2)
+        };
+
+        state.fiveStarHistory.unshift(record);
+        return record;
+      }
+
+      // 5성 미당첨 -> 5성 스택 증가
+      state.pity5 += 1;
+
+      // 4성 판정
+      const rate4 = getFourStarProbability(pityBefore4);
+      const roll4 = Math.random();
+
+      if (roll4 < rate4) {
+        const item4 = pickRandom(FOUR_STAR_POOL);
+        const wasGuaranteed4 = pityBefore4 >= 9;
+        state.pity4 = 0;
+
+        return {
+          pullNumber,
+          rarity: 4,
+          name: item4.name,
+          typeLabel: `4★ ${item4.kind}`,
+          isPickup: false,
+          subLabel: wasGuaranteed4 ? "10연차 4성 천장" : "4성 당첨",
+          spentPity: null,
+          isHardPity: wasGuaranteed4,
+          isSoftPity: false,
+          rateUsed: (rate4 * 100).toFixed(1)
+        };
+      }
+
+      // 4성 미당첨 -> 4성 스택 증가 후 3성 획득
+      state.pity4 += 1;
+      const item3 = pickRandom(THREE_STAR_POOL);
+
+      return {
+        pullNumber,
+        rarity: 3,
+        name: item3,
+        typeLabel: "3★ 장비/코어",
+        isPickup: false,
+        subLabel: "일반 획득",
+        spentPity: null,
+        isHardPity: false,
+        isSoftPity: false,
+        rateUsed: null
+      };
+    }
+
+    function executeBatchPull(count) {
+      const results = [];
+      for (let k = 0; k < count; k += 1) {
+        results.push(executeSinglePull());
+      }
+      state.lastBatch = results;
+      state.lastBatchType = count;
+      renderAll();
+    }
+
+    function resetSimulation() {
+      state.totalPulls = 0;
+      state.pity5 = 0;
+      state.pity4 = 0;
+      state.guaranteedPickup = false;
+      state.count5Total = 0;
+      state.count5Pickup = 0;
+      state.count5Standard = 0;
+      state.lastBatch = [];
+      state.lastBatchType = null;
+      state.fiveStarHistory = [];
+      renderAll();
+    }
+
+    /* ========================================================================
+       4. UI 렌더링 함수들
+       ======================================================================== */
+    const els = {
+      guaranteePill: document.getElementById("guarantee-pill"),
+      totalPulls: document.getElementById("hud-total-pulls"),
+      star5Total: document.getElementById("hud-5star-total"),
+      star5Breakdown: document.getElementById("hud-5star-breakdown"),
+      star5Pity: document.getElementById("hud-5star-pity"),
+      star5Remaining: document.getElementById("hud-5star-remaining"),
+      currentRate: document.getElementById("hud-current-rate"),
+      pityZone: document.getElementById("hud-pity-zone"),
+      star4Pity: document.getElementById("hud-4star-pity"),
+      guaranteeHud: document.getElementById("hud-guarantee"),
+      guaranteeSub: document.getElementById("hud-guarantee-sub"),
+      meterText: document.getElementById("meter-text"),
+      progressBar: document.getElementById("pity-progress-bar"),
+      lastBatchSummary: document.getElementById("last-batch-summary"),
+      resultStage: document.getElementById("result-stage"),
+      logCount: document.getElementById("log-count"),
+      fiveStarLog: document.getElementById("five-star-log")
+    };
+
+    function getPityZoneLabel(i) {
+      if (i >= 79) return "80번째 100% 천장 도달";
+      if (i >= 76) return "천장 직전 고확률 구간 (76~78)";
+      if (i >= 70) return "소프트 피티 가속 구간 (70~75)";
+      if (i >= 65) return "소프트 피티 진입 구간 (65~69)";
+      return "기본 확률 구간 (0.8%)";
+    }
+
+    function renderHud() {
+      const currentProbPct = (getFiveStarProbability(state.pity5) * 100).toFixed(2);
+      const remainingToHard = Math.max(1, 80 - state.pity5);
+      const progressPercent = Math.min(100, (state.pity5 / 80) * 100);
+
+      els.totalPulls.textContent = state.totalPulls.toLocaleString();
+      els.star5Total.textContent = state.count5Total.toLocaleString();
+      els.star5Breakdown.textContent = `픽업 ${state.count5Pickup} · 통상 ${state.count5Standard}`;
+
+      els.star5Pity.textContent = `${state.pity5} / 80`;
+      els.star5Remaining.textContent =
+        state.pity5 >= 79 ? "이번 뽑기 5성 100% 확정!" : `최대 ${remainingToHard}회 내 천장`;
+
+      els.currentRate.textContent = `${currentProbPct}%`;
+      els.pityZone.textContent = getPityZoneLabel(state.pity5);
+
+      els.star4Pity.textContent = `${state.pity4} / 10`;
+
+      if (state.guaranteedPickup) {
+        els.guaranteeHud.textContent = "100% 확천";
+        els.guaranteeHud.className = "hud-value text-green";
+        els.guaranteeSub.textContent = "다음 5성 한정 픽업 확정";
+
+        els.guaranteePill.textContent = "픽업 100% 확정 상태";
+        els.guaranteePill.className = "pill pill-guaranteed";
+      } else {
+        els.guaranteeHud.textContent = "50 : 50";
+        els.guaranteeHud.className = "hud-value text-gold";
+        els.guaranteeSub.textContent = "통상 5성 획득 시 확천";
+
+        els.guaranteePill.textContent = "픽업 50:50 (다음 5★ 미확정)";
+        els.guaranteePill.className = "pill pill-fifty";
+      }
+
+      els.meterText.textContent = `${state.pity5} / 80 (확률 ${currentProbPct}%)`;
+      els.progressBar.style.width = `${progressPercent}%`;
+    }
+
+    function renderLastBatch() {
+      if (!state.lastBatch.length) {
+        els.lastBatchSummary.textContent = "아직 진행한 뽑기가 없습니다";
+        els.resultStage.innerHTML = `
+          <div class="empty-stage">
+            <strong>1뽑기 또는 10뽑기 버튼을 눌러 시뮬레이션을 시작하세요</strong>
+            5성 소프트 피티 구간(65~79스택) 진입 시 확률이 급상승하며, 80번째 뽑기(i = 79)에서 5성이 100% 등장합니다.
+          </div>
+        `;
+        return;
+      }
+
+      const fives = state.lastBatch.filter((r) => r.rarity === 5);
+      const fours = state.lastBatch.filter((r) => r.rarity === 4);
+
+      const summaryParts = [`최근 ${state.lastBatchType}뽑기 결과`];
+      if (fives.length) summaryParts.push(`5성 ${fives.length}개`);
+      if (fours.length) summaryParts.push(`4성 ${fours.length}개`);
+      if (!fives.length && !fours.length) summaryParts.push("3성 위주 획득");
+      els.lastBatchSummary.textContent = summaryParts.join(" · ");
+
+      const gridClass = state.lastBatchType === 1 ? "cards-grid single-pull" : "cards-grid";
+
+      const cardsHtml = state.lastBatch
+        .map((item, idx) => {
+          const starsHtml =
+            item.rarity === 5
+              ? `<span class="stars-5">★★★★★</span>`
+              : item.rarity === 4
+              ? `<span class="stars-4">★★★★</span>`
+              : `<span class="stars-3">★★★</span>`;
+
+          const pickupBadge =
+            item.rarity === 5
+              ? item.isPickup
+                ? `<span class="tag-pickup">PICKUP</span>`
+                : `<span class="tag-standard">통상 5★</span>`
+              : "";
+
+          const pityBadge =
+            item.rarity === 5 && item.spentPity
+              ? `<span class="tag-pity-hit">${item.spentPity}스택${item.isHardPity ? " 천장" : ""}</span>`
+              : item.rarity === 4 && item.isHardPity
+              ? `<span class="tag-pity-hit">4★ 천장</span>`
+              : "";
+
+          return `
+            <article class="gacha-card rarity-${item.rarity}" style="animation-delay: ${Math.min(idx * 30, 270)}ms">
+              <div class="card-top-row">
+                <span class="pull-index">#${item.pullNumber}</span>
+                ${starsHtml}
+              </div>
+              <div class="card-center">
+                <div class="card-type-tag">${item.typeLabel}</div>
+                <div class="card-name">${item.name}</div>
+              </div>
+              <div class="card-footer">
+                ${pickupBadge}
+                ${pityBadge}
+              </div>
+            </article>
+          `;
+        })
+        .join("");
+
+      els.resultStage.innerHTML = `<div class="${gridClass}">${cardsHtml}</div>`;
+    }
+
+    function renderFiveStarLog() {
+      els.logCount.textContent = `총 ${state.fiveStarHistory.length}회 획득`;
+
+      if (!state.fiveStarHistory.length) {
+        els.fiveStarLog.innerHTML = `<p class="toast-note">아직 획득한 5성이 없습니다. 1뽑기 또는 10뽑기를 진행해 보세요.</p>`;
+        return;
+      }
+
+      els.fiveStarLog.innerHTML = state.fiveStarHistory
+        .map((entry) => {
+          const badgeClass = entry.isPickup ? "log-badge log-badge-pickup" : "log-badge log-badge-off";
+          const badgeText = entry.isPickup ? "픽업 성공" : "픽업 실패(확천)";
+          const pityTag = entry.isHardPity ? " · 80천장" : entry.isSoftPity ? " · 소프트피티" : "";
+
+          return `
+            <div class="log-item">
+              <div class="log-item-main">
+                <span class="log-item-title">★5 ${entry.name}</span>
+                <span class="log-item-sub">누적 ${entry.pullNumber}번째 · ${entry.spentPity}스택 소모${pityTag}</span>
+              </div>
+              <span class="${badgeClass}">${badgeText}</span>
+            </div>
+          `;
+        })
+        .join("");
+    }
+
+    function renderAll() {
+      renderHud();
+      renderLastBatch();
+      renderFiveStarLog();
+    }
+
+    /* ========================================================================
+       5. 이벤트 리스너 바인딩 & 초기 화면 렌더
+       ======================================================================== */
+    document.getElementById("btn-pull-1").addEventListener("click", () => {
+      executeBatchPull(1);
+    });
+
+    document.getElementById("btn-pull-10").addEventListener("click", () => {
+      executeBatchPull(10);
+    });
+
+    document.getElementById("btn-reset").addEventListener("click", () => {
+      resetSimulation();
+    });
+
+    renderAll();
+  </script>
+</body>
+</html>
